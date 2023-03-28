@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TODOS</title>
+</head>
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<link rel="stylesheet" href="css/mystyle.css">
+<style>
+    .completed {
+        text-decoration: line-through;
+        color: gray;
+    }
+</style>
+
+<body>
+
+    <div class="contaner" id="app">
+        <div class="row">
+            <div class="col-8 offset-2 mt-5">
+                <div class="input-group mb-3">
+                    <span class="input-group-text">{{text}}</span>
+                    <!-- v-on:click以監聽並執行addTodo -->
+                    <!-- v-on:keyup.enter鍵盤enter按鈕監聽 -->
+                    <input type="text" class="form-control" v-model="newTodo" placeholder="請輸入待辦事項"
+                        v-on:keyup.enter="addTodo">
+                    <button class="btn btn-outline-secondary" type="button" id="button-addon2"
+                        v-on:click="addTodo">新增</button>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs">
+
+                            <li class="nav-item" v-on:click="visibility = 'all'">
+                                <a class="nav-link" v-bind:class="{ 'active' : visibility == 'all'}" href="#">全部</a>
+                            </li>
+                            <li class="nav-item" v-on:click="visibility = 'active'">
+                                <a class="nav-link" v-bind:class="{ 'active' : visibility == 'active'}" href="#">進行中</a>
+                            </li>
+                            <li class="nav-item" v-on:click="visibility = 'completed'">
+                                <a class="nav-link" v-bind:class="{ 'active' : visibility == 'completed'}"
+                                    href="#">已完成</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group">
+                            <li class="list-group-item" v-for="(item,index) in filterTodo" v-bind:key="index">
+                                <!-- d-flex以強制水平同一個div內的格子 -->
+                                <!-- cacheItem.id在未點擊前必不可能等於item.id -->
+                                <div class="d-flex" v-if="cacheItem.id !=item.id">
+                                    <!-- checkbox -->
+                                    <div class="form-check">
+                                        <!-- v-model使checkbox有作用 -->
+                                        <!-- v-bind:key以避免重複的id -->
+                                        <input class="form-check-input" type="checkbox" value="" v-bind:id="item.id"
+                                            v-model="item.completed">
+                                        <!-- 注意v-bind:後不能有空格 -->
+                                        <!-- vi-bind:for="item.id"若拿掉，則可以避免掉跟double click衝突 -->
+                                        <!-- item -->
+                                        <label class="flaorm-check-bel" v-bind:class="{'completed':item.completed}"
+                                            v-on:click="editItem(item)" vi-bind:for="item.id">
+                                            {{item.title}}
+
+                                        <!-- 備註按鈕 -->
+                                        <div class="badge text-bg-success text-decoration-none" href="#"
+                                            v-if="" v-on:click="showPS=true">備註</div>
+
+
+                                        </label>
+                                    </div>
+                                    <!-- 叉叉 -->
+                                    <button type="button" class="btn-close ms-auto" aria-label="Close"
+                                        v-on:click="removeTodo"></button>
+                                </div>
+                                <!-- 備註區 -->
+                                <div>
+                                    <label v-if="item.ps != 0" class="form-check-label" v-bind:ps="item.ps" v-on:click="">
+                                        {{item.ps}}
+                                    </label>
+                                </div>
+
+
+                                <input type="text" class="form-control" v-if="cacheItem.id == item.id"
+                                    v-model="cacheTitle" v-on:keyup.enter="doneTodo(item)" v-on:keyup.esc="cancelTodo">
+                                
+                                <input type="text" class="form-control" v-model="cachePS" placeholder="請輸入備註" 
+                                    v-on:keyup.enter="donePS(item)" v-on:keyup.esc="cancelPS" v-if="showPS">
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex">
+                            <div class="fs-6 me-auto">還有{{countActive}}筆未完成</div>
+                            <a href="#" v-on:click="clear">清除所有任務</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+    </div>
+
+    </div>
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="js/vue.global.js"></script>
+    <script>
+        var App = {
+            data() {
+                return {
+                    text: '待辦事項',
+                    newTodo: '',
+                    visibility: 'all',
+                    //新增變數來顯示內容。all:全  active:進行中 completed:已完成
+                    cacheTitle: '',
+                    cacheItem: [],
+                    showPS: false,
+                    cachePS: '',
+                    todos: [
+                        {
+                            id: '001',
+                            title: '訂午餐',
+                            ps: '備註1',
+                            completed: false,
+                        },
+                        {
+                            id: '002',
+                            title: '訂晚餐',
+                            ps: '備註2',
+                            completed: false,
+                        }
+                    ]
+                }
+            },
+            methods: {
+
+                addTodo() {
+                    //date.now現在時間
+                    var vm = this;
+
+                    //以時間戳記為id
+                    var timestamp = Date.now();
+
+                    // var newTitle= list.newTodo;
+
+                    //trim()以去空格
+                    var newTitle = vm.newTodo.trim();
+
+                    //若為空值則跳出以結束流程
+                    if (!newTitle) {
+                        return;
+                    }
+
+                    vm.todos.push({
+                        id: timestamp,
+                        title: newTitle,
+                        completed: false,
+                        ps:'',
+
+                    });
+
+                    //將輸入後的文字從文字框清除
+                    vm.newTodo = '';
+
+                },
+                addPS() {
+                    var vm = this;
+                    var cachePS = vm.cachePS.trim();
+                    if (!cachePS) {
+                        return;
+                    }
+                    vm.cachePS = todo.ps;
+                },
+                removeTodo(todo) {
+                    console.log(todo);
+                    var vm = this;
+
+                    //若"todo的id等於item的id"則回傳(return)index
+                    //=>等於
+                    var newIndex = vm.todos.findIndex((item, index) => {
+                        return todo.id == item.id
+                    });
+
+                    //console.log(newIndex);
+
+                    //從newIndex的值開始，刪除一筆
+                    vm.todos.splice(newIndex, 1);
+
+                },
+                //修改後
+                editItem(todo) {
+                    var vm = this;
+                    vm.cacheTitle = todo.title;
+                    vm.cacheItem = todo;
+                },
+                editPS() {
+                    var vm = this;
+                    vm.cachePS = todo.ps;
+                    
+                },
+                //完成後
+                doneTodo(todo) {
+                    var vm = this;
+                    todo.title = vm.cacheTitle;
+                    vm.cacheTitle = '';
+                    vm.cacheItem = '';
+                },
+                donePS(todo) {
+                    var vm = this;
+                    todo.ps = vm.cachePS;
+                    vm.cachePS = '';
+                    vm.showPS = false;
+                },
+                //取消後
+                cancelTodo() {
+                    var vm = this;
+                    vm.cacheItem = '';
+                    vm.cacheTitle = '';
+                },
+                cancelPS() {
+                    var vm = this;
+                    vm.cachePS = '';
+                    vm.showPS = false;
+                },
+                //清除後
+                clear() {
+                    this.todos = [];
+                },
+
+            },
+            computed: {
+                filterTodo() {
+                    var vm = this;
+                    if (vm.visibility == 'all') {
+                        return vm.todos;
+
+                    } else if (vm.visibility == 'active') {
+                        //將未完成的資料!item.completed收集回傳
+                        var activeTodo = [];
+                        vm.todos.forEach(function (item, key) {
+                            if (!item.completed) {
+                                activeTodo.push(item);
+                            }
+                        });
+                        return activeTodo;
+
+                    } else if (vm.visibility == 'completed') {
+                        //將完成的資料item.completed收集回傳
+                        var completedTodo = [];
+                        vm.todos.forEach(function (item, key) {
+                            if (item.completed) {
+                                completedTodo.push(item);
+                            }
+                        });
+                        return completedTodo;
+                    }
+                },
+                countActive() {
+                    var vm = this;
+                    var active = 0;
+                    vm.todos.forEach(function (item, key) {
+
+                        if (!item.completed) {
+                            //計數加1
+                            active++;
+                        }
+                    });
+                    return active;
+                }
+            }
+        };
+        Vue.createApp(App).mount('#app');
+    </script>
+
+
+</body>
+
+</html>
